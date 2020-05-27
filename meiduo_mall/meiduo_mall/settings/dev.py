@@ -1,3 +1,5 @@
+# 开发时使用的配置文件，代替settings.py
+
 """
 Django settings for meiduo_mall project.
 
@@ -23,7 +25,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '&g%#4y#&%kmeiaplx7u%6prik^f&l8=q%^xoz^#ss7s&t$y$+-'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# 先改为False测试
+DEBUG = False
 
 ALLOWED_HOSTS = []
 
@@ -51,10 +54,11 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'meiduo_mall.urls'
 
+# 配置模板
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR,"templates")],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
