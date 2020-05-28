@@ -47,6 +47,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # 用户模块注册
+    # 导包路径：决定如何通过包路径找到对应的包，任何python项目都有，meiduo_mall也是导包路径，所以直接apps.users
+    # 查看导包路径：import sys print(sys.path)
+    "apps.users"
 ]
 
 MIDDLEWARE = [
@@ -92,7 +97,7 @@ DATABASES = {
         "PORT": 3306,
         "USER": "zjw",
         "PASSWORD": "ty6yt6",
-        "NAME":"meiduo_mall",
+        "NAME":"meiduo_mall_6",
     }
 }
 
@@ -198,3 +203,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.2/howto/static-files/
 
 STATIC_URL = '/static/'
+
+
+# 指定Django程序默认的用户模型类为自定义的用户模型类
+# AUTH_USER_MODEL = 'auth.User'  为Django默认的User
+# AUTH_USER_MODEL = “子应用.自定义的用户模型类”
+# 指定完用户模型类后，要迁移后才能使用
+AUTH_USER_MODEL = 'users.User'
