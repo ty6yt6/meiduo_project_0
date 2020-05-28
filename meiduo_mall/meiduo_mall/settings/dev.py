@@ -29,11 +29,11 @@ SECRET_KEY = '&g%#4y#&%kmeiaplx7u%6prik^f&l8=q%^xoz^#ss7s&t$y$+-'
 DEBUG = False
 
 ALLOWED_HOSTS = ["*",
-    'api.beautymall.site',
-    '127.0.0.1',
-    'localhost',
-    'www.beauty.site',
-    "www.meiduo.site",
+    # 'api.beautymall.site',
+    # '127.0.0.1',
+    # 'localhost',
+    # 'www.beauty.site',
+    # "www.meiduo.site",
 
 ]
 
@@ -93,7 +93,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         # 'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-        "HOST":"192.168.254.157",
+        "HOST":"192.168.254.158",
         "PORT": 3306,
         "USER": "zjw",
         "PASSWORD": "ty6yt6",
