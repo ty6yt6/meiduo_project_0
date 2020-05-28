@@ -51,7 +51,10 @@ INSTALLED_APPS = [
     # 用户模块注册
     # 导包路径：决定如何通过包路径找到对应的包，任何python项目都有，meiduo_mall也是导包路径，所以直接apps.users
     # 查看导包路径：import sys print(sys.path)
-    "apps.users"
+    "apps.users",
+
+    # 注册解决跨域用的corsheaders
+    "corsheaders",
 ]
 
 MIDDLEWARE = [
@@ -62,7 +65,21 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    # 为跨域添加中间件
+    "corsheaders.middleware.CorsMiddleware",
 ]
+
+# CORS跨域请求白名单设置
+CORS_ORIGIN_WHITELIST = (
+    'http://127.0.0.1:8080',
+    'http://localhost:8080',
+    'http://www.beauty.site:8080',
+    "http://www.meiduo.site:8080",
+    'http://www.beauty.site:8000',
+    "http://www.meiduo.site:8000",
+)
+CORS_ALLOW_CREDENTIALS = True  # 跨域允许携带cookie
 
 ROOT_URLCONF = 'meiduo_mall.urls'
 
