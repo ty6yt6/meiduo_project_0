@@ -198,7 +198,7 @@ var vm = new Vue({
             this.check_pwd();
             this.check_cpwd();
             this.check_phone();
-            this.check_sms_code();
+            // this.check_sms_code();  #目前没有短信验证码，所以注释掉；如果不想注释可以写个假验证码
             this.check_allow();
 
 
