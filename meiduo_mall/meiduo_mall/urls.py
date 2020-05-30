@@ -28,4 +28,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # 注册子应用users
     path("",include("apps.users.urls")),
+
+    # 注册子应用verifications
+    path("",include("apps.verifications.urls")),
 ]

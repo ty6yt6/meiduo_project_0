@@ -55,6 +55,9 @@ INSTALLED_APPS = [
 
     # 注册解决跨域用的corsheaders
     "corsheaders",
+
+    # 注册验证模块
+    "apps.verifications"
 ]
 
 MIDDLEWARE = [
@@ -132,6 +135,14 @@ CACHES = {
     "session": { # session 信息: 存到 1 号库
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": "redis://192.168.254.168:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    },
+    # 将验证码存储在Redis的2号库
+    "verify_code": { # 验证码 信息: 存到 2 号库
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://192.168.254.168:6379/2",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
