@@ -3,7 +3,13 @@ from django.views import View
 from apps.verifications.libs.captcha.captcha import captcha#接收参数用的
 from django_redis import get_redis_connection
 from django import http
+import random,logging
+from apps.verifications.libs.yuntongxun.ccp_sms import CCP
 # Create your views here.
+
+# 创建日志输出器
+logger = logging.getLogger("django")
+
 class ImageCodeView(View):
     # GET http://www.meiduo.site:8000/image_codes/xxxx/
     def get(self,request,uuid):
@@ -25,4 +31,60 @@ class ImageCodeView(View):
 
         # 3.响应图形验证码
         return http.HttpResponse(image,content_type="image/jpg")
+
+# 手机验证码
+class SMSCodeView(View):
+    # 短信验证码
+    # GET /sms_codes/xxx/
+    def get(self,request,mobile):
+        # 实现发送短信验证码的逻辑
+        # param:mobile手机号
+        # return:JSON
+        # 接收参数：mobile(路径参数)、image_code(用户输入的图形验证码)、image_code_id(UUID)
+        image_code_client = request.Get.get("image_code")
+        uuid = request.GET.get("image_code_id")
+
+        # 校验参数
+        # 判断是否缺少必传参数
+        if not all([image_code_client,uuid,mobile]):
+            return http.JsonResponse({"code":400,"errmsg":"缺少必传参数"})
+        # 单个校验参数：image_code（用户输入的图形验证码）、image_code_id(UUID)
+
+
+        # 实现核心逻辑
+        # 提取图形验证码：以前如何存，现在就如何读取
+        redis_conn = get_redis_connection("verify_code")
+        image_code_server = redis_conn.get("img_%s" % uuid)
+        # 判断图形验证码是否过期
+        if not image_code_server:
+            return http.JsonResponse({"code":400,"errmsg":"图形验证码失效"})
+        # 删除图形验证码：为了防止恶意用户的恶意测试该图形验证码，我们要保证每个图形验证码只能使用一次
+        redis_conn.delete("img_%s" % uuid)
+        # 对比图形验证码：判断用户输入的图形验证码和服务端存储的图形验证码是否一致
+        # image_code_server是bytes类型的数据，而image_code_client是str类型，不能直接比较。所以将xxx_server转换成str类型
+        # decode():专门将bytes类型的字符串转换成str类型的字符串
+        image_code_server = image_code_server.decode()
+        # 为了提升用户体验，可以将图形验证码的文字，统一大小写(.lower()或.upper())
+        if image_code_client.lower() != image_code_server.lower():
+            return http.JsonResponse({"code":400,"errmsg":"图形验证码有误"})
+
+        # 生成短信验证码：美多商城短信验证码格式（随机六位数）
+        # random.randint("范围起点"，"范围终点")
+        # 如果不满足六位数，则在前面补0
+        random_number = random.randint(0,999999)
+        sms_code = "%06d" % random_number
+        logger.info(sms_code)
+
+        # 保存短信验证码：redis的2号库是专门保存图形和短信验证码的，也是300s有效期
+        redis_conn = get_redis_connection("verify_code")
+        # redis_conn.setex("key","expire","value")
+        redis_conn.setex("sms_%s" % mobile,300,sms_code)
+
+        # 发送短信验证码：对接容联云通讯的短信SDK，复制下面这行代码，导入需要包即可
+        # CCP().send_template_sms('18123616680', ['习大大发来贺电', 5], 1)
+        CCP().send_template_sms(mobile, [sms_code, 5], 1)
+        # 响应结果
+        return http.JsonResponse({"code":0,"errmsg":"发送短信验证码成功"})
+
+
 
