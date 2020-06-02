@@ -7,6 +7,7 @@ from django import http
 # 日志输出器导入
 import logging,json,re
 from django.contrib.auth import login
+from django_redis import get_redis_connection
 # Create your views here.
 
 # 日志输出器
@@ -33,6 +34,9 @@ class RegisterView(View):
         password2 = json_dict.get("password2")
         mobile = json_dict.get("mobile")
         allow = json_dict.get("allow")
+        # 提取短信验证码
+        sms_code_client = json_dict.get("sms_code")
+
 
         # 校验参数
         # 1.判断是否缺少必传参数
@@ -56,6 +60,18 @@ class RegisterView(View):
         # 5.判断手机号是否满足项目的格式要求
         if not re.match(r"^1[3-9]\d{9}$",mobile):
             return http.JsonResponse({"code":400,"errmsg":"参数mobile有误"})
+
+        # 5.1 判断短信验证码是否正确：和图形验证码验证逻辑一致
+        # 5.2 提取服务端存储的短信验证码
+        redis_conn = get_redis_connection("verify_code")
+        sms_code_server = redis_conn.get("sms_%s" % mobile)  #在python3中，无论是读取还是存储到redis，都是bytes类型
+        # 5.3 判断短信验证码是否过期
+        if not sms_code_server:
+            return http.JsonResponse({"code":400,"errmsg":"短信验证码过期"})
+        # 5.4 对比用户输入的和服务端存储的短信验证码是否一致
+        if sms_code_client != sms_code_server.decode():
+            return http.JsonResponse({"code":400,"errmsg":"参数mobile有误"})
+
         # 6.判断是否勾选协议
         if allow != True:
             return http.JsonResponse({"code": 400, "errmsg": "参数allow有误"})

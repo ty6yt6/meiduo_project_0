@@ -40,6 +40,15 @@ class SMSCodeView(View):
         # 实现发送短信验证码的逻辑
         # param:mobile手机号
         # return:JSON
+
+        # 我们为了尽早检查出该手机号是否频繁发送短信验证码，所以在逻辑开始的时候进行校验（节省服务器资源）
+        # 提取出之前给某手机号绑定的标记
+        redis_conn = get_redis_connection("verify_code")
+        send_flag = redis_conn.get("send_flag_%s" % mobile)
+        # 判断标记是否存在，如果存在，响应错误信息，终止逻辑
+        if send_flag:
+            return http.JsonResponse({"code":400,"errmsg":"请勿频繁发送短信验证码"})
+
         # 接收参数：mobile(路径参数)、image_code(用户输入的图形验证码)、image_code_id(UUID)
         image_code_client = request.GET.get("image_code")  #切记中间的GET都是大写
         uuid = request.GET.get("image_code_id")
@@ -79,6 +88,9 @@ class SMSCodeView(View):
         redis_conn = get_redis_connection("verify_code")
         # redis_conn.setex("key","expire","value")
         redis_conn.setex("sms_%s" % mobile,300,sms_code)
+
+        # 发短信前，给该手机号码添加有效期为60秒的标记,标记名字是1
+        redis_conn.setex("send_flag_%s" % mobile,60,1)
 
         # 发送短信验证码：对接容联云通讯的短信SDK，复制下面这行代码，导入需要包即可
         # CCP().send_template_sms('18123616680', ['习大大发来贺电', 5], 1)
