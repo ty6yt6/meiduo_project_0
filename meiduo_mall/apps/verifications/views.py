@@ -41,7 +41,7 @@ class SMSCodeView(View):
         # param:mobile手机号
         # return:JSON
         # 接收参数：mobile(路径参数)、image_code(用户输入的图形验证码)、image_code_id(UUID)
-        image_code_client = request.Get.get("image_code")
+        image_code_client = request.GET.get("image_code")  #切记中间的GET都是大写
         uuid = request.GET.get("image_code_id")
 
         # 校验参数
@@ -82,6 +82,7 @@ class SMSCodeView(View):
 
         # 发送短信验证码：对接容联云通讯的短信SDK，复制下面这行代码，导入需要包即可
         # CCP().send_template_sms('18123616680', ['习大大发来贺电', 5], 1)
+        # 我们不需要判断发短信成功与否，所以不用接收发短信的返回值，判断其是否成功发送
         CCP().send_template_sms(mobile, [sms_code, 5], 1)
         # 响应结果
         return http.JsonResponse({"code":0,"errmsg":"发送短信验证码成功"})

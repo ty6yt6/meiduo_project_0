@@ -1,4 +1,4 @@
-# -*- coding:utf-8 -*-
+
 # 发短信的工具文件
 
 import ssl
@@ -83,7 +83,7 @@ class CCP(object):
             return -1
 
 
-if __name__ == '__main__':
-    # 注意： 测试的短信模板编号为1
-    # CCP().send_template_sms("测试的手机号码",[“短信验证码”,"过期时间"]，模板ID)
-    CCP().send_template_sms('18123616680', ['习大大发来贺电', 5], 1)
+# if __name__ == '__main__':
+#     # 注意： 测试的短信模板编号为1
+#     # CCP().send_template_sms("测试的手机号码",[“短信验证码”,"过期时间"]，模板ID)
+#     CCP().send_template_sms('18123616680', ['习大大发来贺电', 5], 1)

@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+
 #  Copyright (c) 2014 The CCP project authors. All Rights Reserved.
 #
 #  Use of this source code is governed by a Beijing Speedtong Information Technology Co.,Ltd license

@@ -9,6 +9,6 @@ urlpatterns = [
     path("usernames/<username:username>/count/",views.UsernameCountView.as_view()),
     # 判断手机号是否重复添加路由
     # path("mobiles/(?P<mobile>1[3-9]\d{9})/count/",views.MobileCountView.as_view()),
-    # path("mobiles/<mobile:mobile>/count/",views.MobileCountView.as_view()),
+    path("mobiles/<mobile:mobile>/count/",views.MobileCountView.as_view()),
     path("register/",views.RegisterView.as_view()),
 ]
