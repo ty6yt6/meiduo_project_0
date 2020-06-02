@@ -87,10 +87,21 @@ class SMSCodeView(View):
         # 保存短信验证码：redis的2号库是专门保存图形和短信验证码的，也是300s有效期
         redis_conn = get_redis_connection("verify_code")
         # redis_conn.setex("key","expire","value")
-        redis_conn.setex("sms_%s" % mobile,300,sms_code)
+        # redis_conn.setex("sms_%s" % mobile,300,sms_code)
+        #
+        # # 发短信前，给该手机号码添加有效期为60秒的标记,标记名字是1
+        # redis_conn.setex("send_flag_%s" % mobile,60,1)
 
+        # 使用pipeline管道来操作redis数据库的数据写入
+        # 一般用于数据写入时
+        # 创建pipeline管道
+        pl = redis_conn.pipeline()
+        # 使用管道将请求添加到队列
+        pl.setex("sms_%s" % mobile, 300, sms_code)
         # 发短信前，给该手机号码添加有效期为60秒的标记,标记名字是1
-        redis_conn.setex("send_flag_%s" % mobile,60,1)
+        pl.setex("send_flag_%s" % mobile, 60, 1)
+        # 执行管道
+        pl.execute()
 
         # 发送短信验证码：对接容联云通讯的短信SDK，复制下面这行代码，导入需要包即可
         # CCP().send_template_sms('18123616680', ['习大大发来贺电', 5], 1)
