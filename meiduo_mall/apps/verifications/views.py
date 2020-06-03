@@ -5,6 +5,8 @@ from django_redis import get_redis_connection
 from django import http
 import random,logging
 from apps.verifications.libs.yuntongxun.ccp_sms import CCP
+
+from celery_tasks.sms.tasks import ccp_send_sms_code
 # Create your views here.
 
 # 创建日志输出器
@@ -106,7 +108,16 @@ class SMSCodeView(View):
         # 发送短信验证码：对接容联云通讯的短信SDK，复制下面这行代码，导入需要包即可
         # CCP().send_template_sms('18123616680', ['习大大发来贺电', 5], 1)
         # 我们不需要判断发短信成功与否，所以不用接收发短信的返回值，判断其是否成功发送
-        CCP().send_template_sms(mobile, [sms_code, 5], 1)
+        # 该方式是同步发送短信，发短信延迟则响应也延迟
+        # CCP().send_template_sms(mobile, [sms_code, 5], 1)
+
+        # 使用celery的异步任务发送短信验证码
+        # ccp_send_sms_code(mobile,sms_code)  #这种还是同步执行函数，不是celery的异步形式
+
+        # 异步函数.delay（“参数”）：表示代码执行到这，该函数不要立即执行，先放行，让下一个代码执行
+        # delay是celery封装的方法，只能用在celery中
+        ccp_send_sms_code.delay(mobile,sms_code)
+
         # 响应结果
         return http.JsonResponse({"code":0,"errmsg":"发送短信验证码成功"})
 

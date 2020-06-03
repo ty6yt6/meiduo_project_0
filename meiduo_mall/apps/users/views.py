@@ -42,7 +42,7 @@ class RegisterView(View):
         # 1.判断是否缺少必传参数
         # all([]):判断某些数据中是否有空的数据,里面传列表数据
         # 只要列表中元素有任意一个为空，则返回False。只有所有的元素不为空，就返回True
-        if not all([username,password,password2,mobile,allow]):
+        if not all([username,password,password2,mobile,allow,sms_code_client]):
             # 如果缺少了必传参数，就返回400的状态码和错误信息，终止逻辑
             return http.JsonResponse({"code":400,"errmsg":"缺少必传的参数"})
 
