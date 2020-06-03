@@ -6,13 +6,15 @@ from apps.users.models import User
 from django import http
 # 日志输出器导入
 import logging,json,re
-from django.contrib.auth import login
+from django.contrib.auth import login,authenticate
 from django_redis import get_redis_connection
 # Create your views here.
 
 # 日志输出器
 logger = logging.getLogger("django")
 
+
+# 用户注册
 class RegisterView(View):
     # 用户注册
     # POST http://www.beauty.site:8000/register
@@ -96,7 +98,7 @@ class RegisterView(View):
         return http.JsonResponse({"code":0,"errmsg":"注册成功"})
 
 
-
+# 判断用户名是否重复注册
 class UsernameCountView(View):
     # 判断用户名是否重复注册
 
@@ -121,7 +123,7 @@ class UsernameCountView(View):
         # return render(request, "front_end_pc/index.html", context)
 
 
-# 手机号重复注册
+# 判断手机号是否重复注册
 class MobileCountView(View):
     def get(self,request,mobile):
         # 1.查询mobile在mysql中的个数
@@ -138,3 +140,61 @@ class MobileCountView(View):
             "errmsg":"ok",
             "count":count,
         })
+
+
+# 用户登录
+class LoginView(View):
+    # POST /login/
+
+    def post(self,request):
+        # 实现用户登录逻辑
+        # 接收参数
+        json_dict = json.loads(request.body.decode())
+        # 这里为了多账号登录，username改成account
+        account = json_dict.get("username")
+        password = json_dict.get("password")
+        # 布尔类型，可真可假
+        remembered = json_dict.get("remembered")
+
+        # 校验参数
+        if not all([account,password]):
+            return http.JsonResponse({"code":400,"errmsg":"缺少必传参数"})
+        # if not re.match(r'^[a-zA-Z0-9_-]{5,20}$',username):
+        #     return http.JsonResponse({"code": 400, "errmsg": "username格式错误"})
+        if not re.match(r"^[a-zA-Z0-9_-]{8,20}$",password):
+            return http.JsonResponse({"code":400,"errmsg":"password格式错误"})
+
+        # 实现多账号登录   读源代码得来的方法，跟讲义不同  Newbee!
+        # 判断用户输入的账号是用户名还是手机号
+        if re.match(r"^1[3-9]\d{9}$",account):
+            # 用户输入的是手机号：将USERNAME_FIELD指定为“mobile”字段
+            User.USERNAME_FIELD = "mobile"
+        else:
+            # 用户输入的是用户名：将USERNAME_FIELD指定为“username”字段
+            User.USERNAME_FIELD = "username"
+
+
+        # 实现核心逻辑
+        # 认证登录用户：Django用户认证系统已经封装好了  authenticate
+        # 认证仅仅是为了证明当前用户是美多商城之前的注册用户
+        # 核心思想：先使用用户名作为条件去用户表查询该记录是否存在，如果该用户名对应的记录存在，再校验密码是否正确
+        user = authenticate(request=request,username=username,password=password) #如果通过验证，则会返回用户名
+        # 判断用户认证是否成功
+        if not user:
+            return http.JsonResponse({"code":400,"errmsg":"用户名或密码错误"})  #不能告诉哪里错误，不然容易被黑客利用
+
+        # 实现状态保持（加标记）
+        login(request,user)
+        # 还需要根据remembered参数去设置状态保持的周期
+        # 如果用户选择了记住登录，那么状态保持周期为两周，反之，浏览器会话结束状态保持就销毁
+        if remembered:
+            # 记住登录：设置session数据的过期时间
+            # set_expiry(None):Django封装好的，默认两周
+            # 如果自己写时间，则按秒算
+            request.session.set_expiry(None)
+        else:
+            # 没有记住登录
+            request.session.set_expiry(0)
+
+        # 响应结果
+        return http.JsonResponse({"code":0,"errmsg":"OK"})

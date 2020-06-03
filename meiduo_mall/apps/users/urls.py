@@ -11,4 +11,5 @@ urlpatterns = [
     # path("mobiles/(?P<mobile>1[3-9]\d{9})/count/",views.MobileCountView.as_view()),
     path("mobiles/<mobile:mobile>/count/",views.MobileCountView.as_view()),
     path("register/",views.RegisterView.as_view()),
+    path("login/",views.LoginView.as_view()),
 ]
