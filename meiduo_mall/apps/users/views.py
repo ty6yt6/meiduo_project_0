@@ -6,8 +6,9 @@ from apps.users.models import User
 from django import http
 # 日志输出器导入
 import logging,json,re
-from django.contrib.auth import login,authenticate
+from django.contrib.auth import login,authenticate,logout
 from django_redis import get_redis_connection
+from meiduo_mall.utils.views import LoginRequiredJSONMixin
 # Create your views here.
 
 # 日志输出器
@@ -94,8 +95,11 @@ class RegisterView(View):
         # login(“请求对象”，“注册后活着登录认证后的用户”)
         login(request,user)
 
+        # 把username传入cookie供前端识别，会在页面右上角显示登陆状态
+        response = http.JsonResponse({"code":0,"errmsg":"注册成功"})
+        response.set_cookie("username",user.username,max_age=3600*24*14)
         # 响应结果：如果注册成功，前端会把用户引导到首页
-        return http.JsonResponse({"code":0,"errmsg":"注册成功"})
+        return response
 
 
 # 判断用户名是否重复注册
@@ -165,7 +169,7 @@ class LoginView(View):
             return http.JsonResponse({"code":400,"errmsg":"password格式错误"})
 
         # 实现多账号登录   读源代码得来的方法，跟讲义不同  Newbee!
-        # 判断用户输入的账号是用户名还是手机号
+        # 判断用户输入的账号是用户名还是手机号，如果还有邮箱登录，那再加一个elif
         if re.match(r"^1[3-9]\d{9}$",account):
             # 用户输入的是手机号：将USERNAME_FIELD指定为“mobile”字段
             User.USERNAME_FIELD = "mobile"
@@ -178,7 +182,7 @@ class LoginView(View):
         # 认证登录用户：Django用户认证系统已经封装好了  authenticate
         # 认证仅仅是为了证明当前用户是美多商城之前的注册用户
         # 核心思想：先使用用户名作为条件去用户表查询该记录是否存在，如果该用户名对应的记录存在，再校验密码是否正确
-        user = authenticate(request=request,username=username,password=password) #如果通过验证，则会返回用户名
+        user = authenticate(request=request,username=account,password=password) #如果通过验证，则会返回用户名
         # 判断用户认证是否成功
         if not user:
             return http.JsonResponse({"code":400,"errmsg":"用户名或密码错误"})  #不能告诉哪里错误，不然容易被黑客利用
@@ -196,5 +200,69 @@ class LoginView(View):
             # 没有记住登录
             request.session.set_expiry(0)
 
+        # 把username传入cookie供前端识别，会在页面右上角显示登陆状态
+        response = http.JsonResponse({"code":0,"errmsg":"OK"})
+        response.set_cookie("username",user.username,max_age=3600*24*14)
+
         # 响应结果
-        return http.JsonResponse({"code":0,"errmsg":"OK"})
+        return response
+
+class LogoutView(View):
+    # 退出登录 DELETE /logout/
+
+    def delete(self,request):
+        # 逻辑与登录相反，登录成功后是记住状态，退出登录时是清理登录状态
+        # 登录成功后将用户名写入cookie，退出登录时清理cookie中用户名
+        # 清理登录状态
+        logout(request)
+        # 清理用户名cookie
+        response = http.JsonResponse({"code":0,"errmsg":"退出登录成功"})
+        response.delete_cookie("username")
+        return response
+
+
+class UserInfoView(LoginRequiredJSONMixin,View):
+    # 用户中心数据展示
+    def get(self,request):
+        data_dict = {
+                    "code": 0,
+                    "errmsg": "OK",
+                    "info_data": {
+                        "username": "",
+                        "mobile": "",
+                        "email": "",
+                        "email_active": "",
+                    }
+                }
+        return http.JsonResponse(data_dict)
+
+# 不用再重写一次这个类，因为Django已经定义了，所以直接让已经定义的类作为父类即可。如上
+# class UserInfoView(View):
+#     # 用户中心
+#     # GET /info/
+#     def get(self,request):
+#         # 用户中心数据展示
+#         # 判断用户是否登录的逻辑，是在请求进入视图之后判断的
+#         # 而Django的扩展类-【LoginRequiredMixin】则是在路由分发时就在判断了
+#         # 使用is_autenticated属性判断是否登录
+#         if not request.user.is_authenticated:
+#             # False未登录
+#             return http.JsonResponse({"code": 400, "errmsg": "用户未登录"})
+#         # True已登录
+#         # 因为前端文件写的需要返回这些数据，所以要定义这些
+#         data_dict = {
+#             "code": 0,
+#             "errmsg": "OK",
+#             "info_data": {
+#                 "username": "",
+#                 "mobile": "",
+#                 "email": "",
+#                 "email_active": "",
+#             }
+#         }
+#         return http.JsonResponse(data_dict)
+
+
+
+
+
