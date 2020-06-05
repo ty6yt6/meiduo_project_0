@@ -57,7 +57,10 @@ INSTALLED_APPS = [
     "corsheaders",
 
     # 注册验证模块
-    "apps.verifications"
+    "apps.verifications",
+
+    # 注册第三方登录模块
+    "apps.oauth",
 ]
 
 MIDDLEWARE = [
