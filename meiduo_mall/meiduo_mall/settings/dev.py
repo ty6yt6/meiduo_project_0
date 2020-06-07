@@ -241,3 +241,8 @@ STATIC_URL = '/static/'
 # AUTH_USER_MODEL = “子应用.自定义的用户模型类”
 # 指定完用户模型类后，要迁移后才能使用
 AUTH_USER_MODEL = 'users.User'
+
+# 用于QQ登录的参数
+QQ_CLIENT_ID = '101474184' # 我们申请的 客户端id
+QQ_CLIENT_SECRET = 'c6ce949e04e12ecc909ae6a8b09b637c' # 我们申请的 客户端秘钥
+QQ_REDIRECT_URI = 'http://www.meiduo.site:8080/oauth_callback.html' # 登录成功后回调的路径

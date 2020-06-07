@@ -31,4 +31,6 @@ urlpatterns = [
 
     # 注册子应用verifications
     path("",include("apps.verifications.urls")),
+
+    path("",include("apps.oauth.urls")),
 ]
