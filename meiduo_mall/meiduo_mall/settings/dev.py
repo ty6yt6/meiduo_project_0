@@ -246,3 +246,14 @@ AUTH_USER_MODEL = 'users.User'
 QQ_CLIENT_ID = '101474184' # 我们申请的 客户端id
 QQ_CLIENT_SECRET = 'c6ce949e04e12ecc909ae6a8b09b637c' # 我们申请的 客户端秘钥
 QQ_REDIRECT_URI = 'http://www.meiduo.site:8080/oauth_callback.html' # 登录成功后回调的路径
+
+# send_mail()方法会使用这些配置参数，连接到SMTP服务器上
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend" # 指定邮箱后端
+EMAIL_HOST = "smtp.163.com" # 发邮件主机
+EMAIL_PORT = 25 # 发邮件固定端口
+EMAIL_HOST_USER = "zjw920815@163.com" # 授权的邮箱
+EMAIL_HOST_PASSWORD = "DNKHQSQXKURYRKRE" # 邮箱授权时获得的密码，非邮箱注册登录密码
+EMAIL_FROM = "美多商城<邮箱验证中心>" # 发件人抬头
+
+# 邮箱激活链接
+EMAIL_VERIFY_URL = "http://www.meiduo.site:8080/success_verify_email.html?token="

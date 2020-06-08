@@ -9,6 +9,8 @@ import logging,json,re
 from django.contrib.auth import login,authenticate,logout
 from django_redis import get_redis_connection
 from meiduo_mall.utils.views import LoginRequiredJSONMixin
+from celery_tasks.email.tasks import send_email_verify_url
+from apps.users.utils import generate_email_verify_url,check_email_verify_url
 # Create your views here.
 
 # 日志输出器
@@ -224,15 +226,22 @@ class LogoutView(View):
 class UserInfoView(LoginRequiredJSONMixin,View):
     # 用户中心数据展示
     def get(self,request):
+        # 用户基本信息展示
+        # 由于我们在该接口中，判断了用户是否是登录用户
+        # 所以能够进入到该接口的请求，一定是登录用户发送的
+        # ∴request.user里面获取的用户信息一定是当前登录的用户信息
+        # 可以查看AuthenticationMiddleware源代码，里面封装了这块的逻辑
+        # （Django拿着session中提取的user_id，去数据库查询出来的user信息，赋值给了request.user）
+        # 技巧:如果该接口只有登录用户可以访问，那么在接口内部可以直接使用request.user获取当前登录用户信息
         data_dict = {
                     "code": 0,
                     "errmsg": "OK",
                     "info_data": {
-                        "username": "",
-                        "mobile": "",
-                        "email": "",
-                        "email_active": "",
-                    }
+                        "username": request.user.username,
+                        "mobile": request.user.mobile,
+                        "email": request.user.email,
+                        "email_active": request.user.email_active,
+                    },
                 }
         return http.JsonResponse(data_dict)
 
@@ -262,6 +271,62 @@ class UserInfoView(LoginRequiredJSONMixin,View):
 #         }
 #         return http.JsonResponse(data_dict)
 
+class EmailView(LoginRequiredJSONMixin,View):
+    # 添加邮箱
+    # PUT /emails/
+
+    def put(self,request):
+        #实现添加邮箱逻辑
+        # 1.接收参数
+        json_dict = json.loads(request.body.decode())
+        email = json_dict.get("email")
+
+        # 2.校验参数
+        if not email:
+            return http.JsonResponse({"code":400,"errmsg":"缺少必传参数"})
+        # 校验邮箱格式
+        if not re.match(r"^[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$",email):
+            return http.JsonResponse({"code":400,"errmsg":"参数email有误"})
+        # 3.实现核心逻辑:添加邮箱就是将用户填写的邮箱地址保存到当前登录用户的email字段中
+        try:
+            request.user.email = email
+            request.user.save()
+        except Exception as e:
+            logger.error(e)
+            return http.JsonResponse({"code":400,"errmsg":"添加邮箱失败"})
+
+        # 发送邮箱的验证激活邮件
+        # 耗时操作，不能让它阻塞主逻辑，需要解耦出去，用celery完成
+        # send_email_verify_url.delay(email,"激活链接")
+        # verify_url = "封装一个工具方法，专门生成激活链接，放在apps.user里"
+        verify_url = generate_email_verify_url(user=request.user) #传参不能直接user，当前登录用户.user即可
+        send_email_verify_url.delay(email,verify_url)
+
+        # 4.响应结果
+        return http.JsonResponse({"code":0,"errmsg":"OK"})
+
+# 验证激活邮箱
+class EmailActiveView(View):
+    # PUT  /email/verification/
+    def put(self,request):
+        # 核心逻辑：将email_active变为True
+        # 1.接收参数
+        token = request.GET.get("token")
+        # 2.校验参数
+        if not token:
+            return http.JsonResponse({"code":400,"errmsg":"缺少必传参数"})
+
+        # 3.实现核心逻辑：通过token提取要验证邮箱的用户-->将要验证邮箱的用户的email_active字段设置为True
+        user = check_email_verify_url(token=token)
+        try:
+            user.email_active = True
+            user.save() #同步到数据库
+        except Exception as e:
+            logger.error(e)
+            return http.JsonResponse({"code":400,"errmsg":"邮箱验证失败"})
+
+        # 4.响应结果
+        return http.JsonResponse({"code": 0, "errmsg": "邮箱验证成功"})
 
 
 
