@@ -61,6 +61,9 @@ INSTALLED_APPS = [
 
     # 注册第三方登录模块
     "apps.oauth",
+
+    # 注册收货地址省市区三级联动模块
+    "apps.areas",
 ]
 
 MIDDLEWARE = [

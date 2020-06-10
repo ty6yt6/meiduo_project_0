@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.views import View
 # 这里users.models 导入User，是从apps开始的，如果把目录写全，则Django不支持，所以只能这样写。
 # 这样写pycharm又不支持，所以要把apps这个文件夹添加到导包路径中，右键 + Mark directory as + sources root
-from apps.users.models import User
+from apps.users.models import User,Address
 from django import http
 # 日志输出器导入
 import logging,json,re
@@ -11,6 +11,7 @@ from django_redis import get_redis_connection
 from meiduo_mall.utils.views import LoginRequiredJSONMixin
 from celery_tasks.email.tasks import send_email_verify_url
 from apps.users.utils import generate_email_verify_url,check_email_verify_url
+
 # Create your views here.
 
 # 日志输出器
@@ -327,6 +328,134 @@ class EmailActiveView(View):
 
         # 4.响应结果
         return http.JsonResponse({"code": 0, "errmsg": "邮箱验证成功"})
+
+
+# 新增收货地址
+class CreateAddressView(LoginRequiredJSONMixin,View):
+    # POST /addresses/create/
+
+    def post(self,request):
+        # 实现新增地址的逻辑
+
+        # 补充逻辑:在每次新增地址前,我们都要判断当前登录用户未被逻辑删除的地址数量是否超过了上限20
+        # 核心:查询出当前登录用户未被逻辑删除地址数量
+        # 逻辑：一查多
+        try:
+            count = request.user.addresses.filter(is_deleted=False).count()
+        except Exception as e:
+            return http.JsonResponse({"code":400,"errmsg":"获取数据库中的地址个数出错"})
+        # 判断是否超过上限
+        if count >= 20:
+            return http.JsonResponse({"code":400,"errmsg":"地址数量超过上限"})
+
+        # 接收参数
+        json_dict = json.loads(request.body.decode())
+        receiver = json_dict.get('receiver')
+        province_id = json_dict.get('province_id')
+        city_id = json_dict.get('city_id')
+        district_id = json_dict.get('district_id')
+        place = json_dict.get('place')
+        mobile = json_dict.get('mobile')
+        tel = json_dict.get('tel') # 非必传
+        email = json_dict.get('email') # 非必传
+        # 校验参数
+        # 说明：province_id,city_id,district_id在这里不需要校验
+        # 这里的校验仅仅是校验数据格式是否满足要求，省市区的参数传过来的是外键，外键自带约束和校验
+        # 如果外键错误，在赋值时会自动抛出异常，在赋值时可以捕获异常校验
+        if not all([receiver, province_id, city_id, district_id, place, mobile]):
+            return http.JsonResponse({'code': 400,'errmsg': '缺少必传参数'})
+
+        if not re.match(r'^1[3-9]\d{9}$', mobile):
+            return http.JsonResponse({'code': 400,'errmsg': '参数mobile有误'})
+
+        if tel:
+            if not re.match(r'^(0[0-9]{2,3}-)?([2-9][0-9]{6,7})+(-[0-9]{1,4})?$', tel):
+                return http.JsonResponse({'code': 400,'errmsg': '参数tel有误'})
+        if email:
+            if not re.match(r'^[a-z0-9][\w\.\-]*@[a-z0-9\-]+(\.[a-z]{2,5}){1,2}$', email):
+                return http.JsonResponse({'code': 400,'errmsg': '参数email有误'})
+
+        # 实现核心逻辑：将用户填写的地址数据保存到地址数据表
+        try:
+            address = Address.objects.create(
+                # 外键赋值有两种形式：
+                    #id对应id：user_id = request.user.id
+                    #属性对应对象（具体的值）：user = request.user
+                user = request.user, # 或者 user_id = request.user.id
+                province_id = province_id,  # province 是模型类中的属性，在表中表现为province_id。因为前端传回来只有id信息
+                city_id = city_id,
+                district_id = district_id,
+                title = receiver, # 默认地址的标题就是收件人
+                receiver = receiver,
+                place = place,
+                mobile = mobile,
+                tel = tel,
+                email = email,
+                # 实际还有个on_delete，默认False不需要赋值
+            )
+        except Exception as e:
+            logger.error(e)
+            return http.JsonResponse({"code":400,"errmsg":"新增地址失败"})
+
+        # 补充逻辑：在新增地址时，给用户绑定一个默认地址，为了保证用户一创建地址就有默认地址
+        # 判断当前用户是否已有默认地址
+        # 如果没有默认地址，就把当前的地址作为该用户的默认地址
+        if not request.user.default_address:
+            request.user.default_address = address
+            # request.user.default_address_id = address.id  也可
+            request.user.save()
+
+        # 响应结果：为了让新增地址成功后，页面可以及时展示新增的地址，我们会将新增的地址响应给前端渲染
+        # 构造要响应的数据
+        address_dict = {
+            "id": address.id,
+            "title": address.title,
+            "receiver": address.receiver,
+            "province": address.province.name,
+            "city": address.city.name,
+            "district": address.district.name,
+            "place": address.place,
+            "mobile": address.mobile,
+            "tel": address.tel,
+            "email": address.email
+        }
+        return http.JsonResponse({"code":0,"errmsg":"OK","address":address_dict}) # 响应的是一个字典
+
+# 获取收货地址
+class AddressView(LoginRequiredJSONMixin,View):
+    # GET /addresses/
+
+    def get(self,request):
+        # 查询收货地址
+        # 核心逻辑：查询当前登录用户未被逻辑删除的地址
+        address_model_list = request.user.addresses.filter(is_deleted=False)
+
+        # 查询当前登录用户默认地址ID
+        default_address_id = request.user.default_address_id
+
+        # 将地址模型列表转字典列表
+        addresses = []
+        for address in address_model_list:
+            address_dict = {
+                "id":address.id,
+                "title":address.title,
+                "receiver":address.receiver,
+                "province":address.province.name,
+                "city":address.city.name,
+                "district":address.district.name,
+                "place":address.place,
+                "mobile":address.mobile,
+                "tel":address.tel,
+                "email":address.email,
+            }
+            addresses.append(address_dict)
+
+        return http.JsonResponse({
+            "code":0,
+            "errmsg":"OK",
+            "default_address_id":default_address_id,
+            "addresses":addresses,
+        })
 
 
 
