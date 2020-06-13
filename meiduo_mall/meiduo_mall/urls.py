@@ -35,4 +35,7 @@ urlpatterns = [
     path("",include("apps.oauth.urls")),
 
     path("",include("apps.areas.urls")),
+
+    # 首页测试查询列表
+    path("",include("apps.contents.urls")),
 ]

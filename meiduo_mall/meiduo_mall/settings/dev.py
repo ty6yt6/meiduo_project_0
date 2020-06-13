@@ -16,7 +16,7 @@ import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
+# BASE_DIR指向的是第二个meiduo_mall
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
@@ -64,6 +64,12 @@ INSTALLED_APPS = [
 
     # 注册收货地址省市区三级联动模块
     "apps.areas",
+
+    # 注册首页类目子应用，只有注册了才能迁移建表
+    "apps.contents",
+
+    # 执行定时任务
+    "django_crontab",
 ]
 
 MIDDLEWARE = [
@@ -260,3 +266,20 @@ EMAIL_FROM = "美多商城<邮箱验证中心>" # 发件人抬头
 
 # 邮箱激活链接
 EMAIL_VERIFY_URL = "http://www.meiduo.site:8080/success_verify_email.html?token="
+
+# 定时任务
+CRONJOBS = [
+    # 每1分钟生成一次首页静态文件
+    # (定时时间,定时任务,>> + 日志文件路径)
+    # BASE_DIR指向的是第二个meiduo_mall
+    ('*/1 * * * *', 'apps.contents.crons.generate_static_index_html', '>> ' + os.path.join(BASE_DIR), 'logs/crontab.log')
+]
+# 解决 crontab 不支持中文的问题
+CRONTAB_COMMAND_PREFIX = 'LANG_ALL=zh_cn.UTF-8'
+
+# 指定自定义的文件存储类(覆盖了原有的路径)
+DEFAULT_FILE_STORAGE = "meiduo_mall.utils.fastdfs.fdfs_storage.FastDFSStorage"
+
+# 指定FastDFS服务器的位置
+# 本身是"http://192.168.254.168:8888/"image.meiduo.site
+FDFS_URL = "http://192.168.254.168:8888/"
