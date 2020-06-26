@@ -227,10 +227,10 @@ class LogoutView(View):
 class UserInfoView(LoginRequiredJSONMixin,View):
     # 用户中心数据展示
     def get(self,request):
-        # 用户基本信息展示
-        # 由于我们在该接口中，判断了用户是否是登录用户
-        # 所以能够进入到该接口的请求，一定是登录用户发送的
-        # ∴request.user里面获取的用户信息一定是当前登录的用户信息
+        #         # 用户基本信息展示
+        #         # 由于我们在该接口中，判断了用户是否是登录用户
+        #         # 所以能够进入到该接口的请求，一定是登录用户发送的
+        #         # ∴request.user里面获取的用户信息一定是当前登录的用户信息
         # 可以查看AuthenticationMiddleware源代码，里面封装了这块的逻辑
         # （Django拿着session中提取的user_id，去数据库查询出来的user信息，赋值给了request.user）
         # 技巧:如果该接口只有登录用户可以访问，那么在接口内部可以直接使用request.user获取当前登录用户信息

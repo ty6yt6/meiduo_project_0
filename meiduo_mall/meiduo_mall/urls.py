@@ -38,4 +38,6 @@ urlpatterns = [
 
     # 首页测试查询列表
     path("",include("apps.contents.urls")),
+
+    path("",include("apps.goods.urls")),
 ]
