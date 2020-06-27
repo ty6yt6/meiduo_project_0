@@ -11,7 +11,7 @@ from django_redis import get_redis_connection
 from meiduo_mall.utils.views import LoginRequiredJSONMixin
 from celery_tasks.email.tasks import send_email_verify_url
 from apps.users.utils import generate_email_verify_url,check_email_verify_url
-
+from apps.goods.models import SKU
 # Create your views here.
 
 # 日志输出器
@@ -459,4 +459,65 @@ class AddressView(LoginRequiredJSONMixin,View):
 
 
 
+class UserBrowseHistory(LoginRequiredJSONMixin,View):
+    """用户浏览记录
+    POST  /browse_histories/"""
+    def post(self,request):
+        """保存用户浏览记录"""
+        # 接收参数
+        json_dict = json.loads(request.body.decode())
+        sku_id = json_dict.get("sku_id")
 
+        # 校验参数：判断sku_id是否存在
+        try:
+            SKU.objects.get(id=sku_id)
+        except SKU.DoesNotExist:
+            return http.JsonResponse({"code":400,"errmsg":"参数sku_id有误"})
+
+        # 实现核心逻辑：操作redis的4号库，保存sku_id作为浏览记录
+        user_id = request.user.id
+        # 创建与redis的4号库连接
+        redis_conn = get_redis_connection("history")
+        pl = redis_conn.pipeline()
+        # 先去重
+        pl.lrem("history_%s"%user_id,0,sku_id)
+        # 再添加：最近浏览的排在最前面
+        pl.lpush("history_%s"%user_id,sku_id)
+        # 最后截取前五个
+        pl.ltrim("history_%s"%user_id,0,4)
+        # 最后执行一次管道。这样不用每次有命令就访问一次redis，提高效率
+        pl.execute()
+        # 响应结果
+        return http.JsonResponse({"code":0,"errmsg":"OK"})
+
+
+    """查询用户浏览记录
+    GET  /browse_histories/"""
+    def get(self,request):
+        # 无条件查询redis中保存的该用户所有的浏览记录，其实最多只有5个
+        user_id = request.user.id
+        # 创建连接到redis4号库的对象
+        redis_conn = get_redis_connection("history")
+        # 操作redis的list读取保存的浏览记录,就是几个id（sku_ids=[b"4",b"12",b"14",b"16"],bytes类型）
+        sku_ids = redis_conn.lrange("history_%s" % user_id,0,-1)
+
+        # 通过sku_id查询对应的sku
+        # 常规的写这种
+        # 把查询到的sku查询集转字典列表
+        skus = []
+        for sku_id in sku_ids:
+            sku = SKU.objects.get(id=sku_id)
+            skus.append({
+                "id": sku.id,
+                "name": sku.name,
+                "default_image_url": sku.default_image.url,
+                "price": sku.price,
+            })
+        # 非常规简化的写这种
+        # in:查询指定范围的数据
+        # sku_model_list = SKU.objects.filter(id__in = sku_ids)
+        # 注意点：当使用filter()搭配__in去查询指定范围的数据时，默认会根据主键字段由小到大排序
+
+
+        # return http.JsonResponse({"code":0,"errmsg":"OK","skus":[]})
+        return http.JsonResponse({"code":0,"errmsg":"OK","skus":skus})

@@ -165,6 +165,14 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
     },
+    # 将商品浏览历史记录存在Redis的4号库
+    "history": { # 历史记录: 存到 4 号库
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://192.168.254.168:6379/4",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    },
 }
 # 配置session后端
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"#修改为redis存储session
