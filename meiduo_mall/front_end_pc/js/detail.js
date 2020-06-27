@@ -3,7 +3,7 @@ var vm = new Vue({
     delimiters: ['[[', ']]'],
     data: {
         host,
-        username: sessionStorage.username || localStorage.username,
+        username: this.username = getCookie('username'),
         token: sessionStorage.token || localStorage.token,
         tab_content: {
             detail: true,
@@ -56,14 +56,14 @@ var vm = new Vue({
     },
     methods: {
          // 退出登录按钮
-        logoutfunc: function () {
+        logout: function () {
             var url = this.host + '/logout/';
             axios.delete(url, {
                 responseType: 'json',
                 withCredentials:true,
             })
                 .then(response => {
-                    location.href = 'login.html';
+                    location.href = '/login.html';
                 })
                 .catch(error => {
                     console.log(error.response);
